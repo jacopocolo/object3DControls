@@ -4,7 +4,7 @@
 
 <script>
 import * as THREE from "three";
-import { OrbitControls } from "./components/OrbitControlsForObject.js";
+import { ObjectControls } from "./components/OrbitControlsForObject.js";
 export let scene, camera, renderer, cube;
 let controls;
 
@@ -40,10 +40,10 @@ export default {
       cube = new THREE.Mesh(geometry, material);
       scene.add(cube);
 
-      controls = new OrbitControls(cube, renderer.domElement);
+      controls = new ObjectControls(cube, renderer.domElement);
       controls.zoomSpeed = 2;
       controls.touches = {
-        ONE: "NONE",
+        ONE: "TRANSLATE",
         TWO: "SCALE_ROTATE",
       };
       controls.addEventListener(
@@ -55,7 +55,8 @@ export default {
         false
       );
       controls.update();
-      camera.position.z = 5;
+      camera.position.set(5, 5, 5);
+      camera.lookAt(0, 0, 0);
     },
     animate() {
       requestAnimationFrame(this.animate);

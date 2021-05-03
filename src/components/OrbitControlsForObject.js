@@ -1,5 +1,6 @@
 //https://github.com/albertopiras/threeJS-object-controls/blob/master/ObjectControls.js
 //rotate https://jsfiddle.net/MadLittleMods/n6u6asza/
+//https://codepen.io/OpherV/pen/YXwwNR
 
 import {
     EventDispatcher,
@@ -32,14 +33,14 @@ const _changeEvent = { type: 'change' };
 const _startEvent = { type: 'start' };
 const _endEvent = { type: 'end' };
 
-class OrbitControls extends EventDispatcher {
+class ObjectControls extends EventDispatcher {
 
     constructor(object, domElement) {
 
         super();
 
-        if (domElement === undefined) console.warn('THREE.OrbitControls: The second parameter "domElement" is now mandatory.');
-        if (domElement === document) console.error('THREE.OrbitControls: "document" should not be used as the target "domElement". Please use "renderer.domElement" instead.');
+        if (domElement === undefined) console.warn('THREE.ObjectControls: The second parameter "domElement" is now mandatory.');
+        if (domElement === document) console.error('THREE.ObjectControls: "document" should not be used as the target "domElement". Please use "renderer.domElement" instead.');
 
         this.object = object;
         this.domElement = domElement;
@@ -146,7 +147,7 @@ class OrbitControls extends EventDispatcher {
                         (rotateDelta.y * 1) * (Math.PI / 180),
                         (rotateDelta.x * 1) * (Math.PI / 180),
                         0,
-                        'YXZ'
+                        'XYZ'
                     ));
 
                 scope.object.quaternion.multiplyQuaternions(deltaRotationQuaternion, scope.object.quaternion);
@@ -157,6 +158,11 @@ class OrbitControls extends EventDispatcher {
                 if (scaleChanged) {
                     scope.object.scale.set(scaleDelta.x, scaleDelta.y, scaleDelta.z)
                     scaleChanged = false;
+                }
+
+                if (positionChanged) {
+                    scope.object.position.x = position.x;
+                    scope.object.position.y = -position.y;
                 }
 
                 return false;
@@ -212,6 +218,9 @@ class OrbitControls extends EventDispatcher {
         // const EPS = 0.000001;
 
         // const panOffset = new Vector3();
+        const position = new Vector3();
+        let positionChanged = false;
+
         // let scale = 1;
         let scaleChanged = false;
 
@@ -248,22 +257,20 @@ class OrbitControls extends EventDispatcher {
         //     console.log("rotateUp", angle)
         // }
 
-        const translateLeft = function (delta) {
+        const translateLeft = function () {
 
-            console.info('translateLeft', delta);
-
-            return function translateLeft(delta) {
-                console.info('translateLeft', delta);
+            return function translateLeft(d) {
+                position.x += d / 100;
+                positionChanged = true;
             }
 
         }();
 
-        const translateUp = function (delta) {
+        const translateUp = function () {
 
-            console.info('translateUp', delta);
-
-            return function translateUp(delta) {
-                console.info('translateUp', delta);
+            return function translateUp(d) {
+                position.y += d / 100;
+                positionChanged = true;
             }
 
         }();
@@ -394,10 +401,12 @@ class OrbitControls extends EventDispatcher {
         function handleMouseWheel(event) {
 
             if (event.deltaY > 0) {
-                reduce(getScale(0.95));
+
+                enlarge(getScale(1.05));
 
             } else if (event.deltaY < 0) {
-                enlarge(getScale(1.05));
+
+                reduce(getScale(0.95));
             }
 
             scope.update();
@@ -1007,4 +1016,4 @@ class OrbitControls extends EventDispatcher {
 
 }
 
-export { OrbitControls };
+export { ObjectControls };
