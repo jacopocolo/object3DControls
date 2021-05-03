@@ -46,14 +46,14 @@ export default {
         ONE: "NONE",
         TWO: "SCALE_ROTATE",
       };
-      // controls.addEventListener(
-      //   "change",
-      //   () => {
-      //     console.log("update");
-      //     controls.update();
-      //   },
-      //   false
-      // );
+      controls.addEventListener(
+        "change",
+        () => {
+          console.log("update");
+          controls.update();
+        },
+        false
+      );
       controls.update();
       camera.position.z = 5;
     },
@@ -62,7 +62,7 @@ export default {
 
       // cube.rotation.x += 0.01;
       // cube.rotation.y += 0.01;
-      controls.update();
+      // controls.update();
       // console.log(cube.position);
 
       renderer.render(scene, camera);

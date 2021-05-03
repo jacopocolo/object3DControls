@@ -3,20 +3,27 @@
 
 import {
     EventDispatcher,
-    MOUSE,
-    // Quaternion,
-    // Spherical,
     Vector2,
+    Vector3,
     Quaternion,
     Euler,
-    // Vector3
 } from 'three';
+
+const MOUSE = {
+    LEFT: "LEFT",
+    MIDDLE: "MIDDLE",
+    RIGHT: "RIGHT",
+    ROTATE: "ROTATE",
+    SCALE: "SCALE",
+    TRANSLATE: "TRANSLATE",
+}
+Object.freeze(MOUSE);
 
 const ACTION = {
     NONE: "NONE",
     ROTATE: "ROTATE",
-    PAN: "PAN",
-    SCALE_PAN: "SCALE_PAN",
+    TRANSLATE: "TRANSLATE",
+    SCALE_TRANSLATE: "SCALE_TRANSLATE",
     SCALE_ROTATE: "SCALE_ROTATE",
 };
 Object.freeze(ACTION);
@@ -46,7 +53,7 @@ class OrbitControls extends EventDispatcher {
 
         // How far you can zoom in and out ( OrthographicCamera only )
         this.minZoom = 0.5;
-        this.maxZoom = 2;
+        this.maxZoom = 3;
 
         // How far you can orbit vertically, upper and lower limits.
         // Range is 0 to Math.PI radians.
@@ -72,20 +79,20 @@ class OrbitControls extends EventDispatcher {
         this.enableRotate = true;
         this.rotateSpeed = 1;
 
-        // Set to false to disable panning
-        this.enablePan = true;
-        this.panSpeed = 1.0;
+        // Set to false to disable translating
+        this.enableTranslate = true;
+        this.translateSpeed = 1.0;
         this.screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
-        this.keyPanSpeed = 7.0;	// pixels moved per arrow key push
+        this.keyTranslateSpeed = 7.0;	// pixels moved per arrow key push
 
         // The four arrow keys
         this.keys = { LEFT: 'ArrowLeft', UP: 'ArrowUp', RIGHT: 'ArrowRight', BOTTOM: 'ArrowDown' };
 
         // Mouse buttons
-        this.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.SCALE, RIGHT: MOUSE.PAN };
+        this.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.SCALE, RIGHT: MOUSE.TRANSLATE };
 
         // Touch fingers
-        this.touches = { ONE: ACTION.ROTATE, TWO: ACTION.SCALE_ROTATE };
+        this.touches = { ONE: ACTION.TRANSLATE, TWO: ACTION.SCALE_ROTATE };
 
         // for reset
         this.position0 = this.object.position.clone();
@@ -147,10 +154,9 @@ class OrbitControls extends EventDispatcher {
                 rotateDelta.x = 0;
                 rotateDelta.y = 0;
 
-                // scope.object.scale.set(scaleDelta, scaleDelta, scaleDelta)
-
-                if (zoomChanged) {
-                    console.log(zoomChanged)
+                if (scaleChanged) {
+                    scope.object.scale.set(scaleDelta.x, scaleDelta.y, scaleDelta.z)
+                    scaleChanged = false;
                 }
 
                 return false;
@@ -194,10 +200,10 @@ class OrbitControls extends EventDispatcher {
             NONE: - 1,
             ROTATE: 0,
             SCALE: 1,
-            PAN: 2,
+            TRANSLATE: 2,
             TOUCH_ROTATE: 3,
-            TOUCH_PAN: 4,
-            TOUCH_SCALE_PAN: 5,
+            TOUCH_TRANSLATE: 4,
+            TOUCH_SCALE_TRANSLATE: 5,
             TOUCH_SCALE_ROTATE: 6
         };
 
@@ -206,19 +212,20 @@ class OrbitControls extends EventDispatcher {
         // const EPS = 0.000001;
 
         // const panOffset = new Vector3();
-        let zoomChanged = false;
+        // let scale = 1;
+        let scaleChanged = false;
 
         const rotateStart = new Vector2();
         const rotateEnd = new Vector2();
         const rotateDelta = new Vector2();
 
-        const panStart = new Vector2();
-        const panEnd = new Vector2();
-        const panDelta = new Vector2();
+        const translateStart = new Vector2();
+        const translateEnd = new Vector2();
+        const translateDelta = new Vector2();
 
         const scaleStart = new Vector2();
         const scaleEnd = new Vector2();
-        const scaleDelta = new Vector2();
+        const scaleDelta = new Vector3();
         let scaleAngle = 0;
 
         // function getAutoRotationAngle() {
@@ -227,11 +234,11 @@ class OrbitControls extends EventDispatcher {
 
         // }
 
-        // function getZoomScale() {
+        function getScale(val) {
 
-        //     return Math.pow(0.95, scope.zoomSpeed);
+            return Math.pow(val, scope.zoomSpeed);
 
-        // }
+        }
 
         // function rotateLeft(angle) {
         //     console.log("rotateLeft", angle)
@@ -241,88 +248,63 @@ class OrbitControls extends EventDispatcher {
         //     console.log("rotateUp", angle)
         // }
 
-        const panLeft = function (delta) {
+        const translateLeft = function (delta) {
 
-            console.info('panLeft', delta);
+            console.info('translateLeft', delta);
 
-            return function panLeft(delta) {
-                console.info('panLeft', delta);
+            return function translateLeft(delta) {
+                console.info('translateLeft', delta);
             }
-
-            // const v = new Vector3();
-            // return function panLeft(distance, objectMatrix) {
-
-            //     v.setFromMatrixColumn(objectMatrix, 0); // get X column of objectMatrix
-            //     v.multiplyScalar(- distance);
-
-            //     panOffset.add(v);
-
-            // };
 
         }();
 
-        const panUp = function (delta) {
+        const translateUp = function (delta) {
 
-            console.info('panLeft', delta);
+            console.info('translateUp', delta);
 
-            return function panUp(delta) {
-                console.info('panUp', delta);
+            return function translateUp(delta) {
+                console.info('translateUp', delta);
             }
-
-            // const v = new Vector3();
-
-            // return function panUp(distance, objectMatrix) {
-
-            //     if (scope.screenSpacePanning === true) {
-
-            //         v.setFromMatrixColumn(objectMatrix, 1);
-
-            //     } else {
-
-            //         v.setFromMatrixColumn(objectMatrix, 0);
-            //         v.crossVectors(scope.object.up, v);
-
-            //     }
-
-            //     v.multiplyScalar(distance);
-
-            //     panOffset.add(v);
-
-            // };
 
         }();
 
         // deltaX and deltaY are in pixels; right and down are positive
-        const pan = function () {
+        const translate = function () {
 
             // const offset = new Vector3();
 
-            return function pan(deltaX, deltaY) {
+            return function translate(deltaX, deltaY) {
                 // const element = scope.domElement;
 
-                panLeft(deltaX);
-                panUp(deltaY);
+                translateLeft(deltaX);
+                translateUp(deltaY);
 
             };
 
         }();
 
-        function reduce(scale) {
-            let s = Math.max(
+        function reduce(s) {
+            let scale = Math.max(
                 scope.minZoom,
-                Math.min(scope.maxZoom, scope.object.scale.multiplyScalar(scale).x
+                Math.min(scope.maxZoom, scope.object.scale.multiplyScalar(s).x
                 )
             );
-            scope.object.scale.set(s, s, s);
+            scaleDelta.x = scale;
+            scaleDelta.y = scale;
+            scaleDelta.z = scale;
+            scaleChanged = true;
         }
 
-        function enlarge(scale) {
-            let s = Math.max(
+        function enlarge(s) {
+            let scale = Math.max(
                 scope.minZoom,
-                Math.min(scope.maxZoom, scope.object.scale.multiplyScalar(scale).x
+                Math.min(scope.maxZoom, scope.object.scale.multiplyScalar(s).x
                 )
             );
-            scope.object.scale.set(s, s, s);
+            scaleDelta.x = scale;
+            scaleDelta.y = scale;
+            scaleDelta.z = scale;
+            scaleChanged = true;
         }
 
         //
@@ -339,9 +321,9 @@ class OrbitControls extends EventDispatcher {
             scaleStart.set(event.clientX, event.clientY);
         }
 
-        function handleMouseDownPan(event) {
+        function handleMouseDownTranslate(event) {
 
-            panStart.set(event.clientX, event.clientY);
+            translateStart.set(event.clientX, event.clientY);
 
         }
 
@@ -371,6 +353,8 @@ class OrbitControls extends EventDispatcher {
             scaleAngle = Math.atan2(scaleEnd.y - scaleStart.y, scaleEnd.x - scaleStart.x); //in radians;
             console.warn(scaleAngle);
 
+            //doesn't really work
+
             if (scaleDelta.y > 0) {
 
                 reduce(scaleDelta.y);
@@ -387,15 +371,15 @@ class OrbitControls extends EventDispatcher {
 
         }
 
-        function handleMouseMovePan(event) {
+        function handleMouseMoveTranslate(event) {
 
-            panEnd.set(event.clientX, event.clientY);
+            translateEnd.set(event.clientX, event.clientY);
 
-            panDelta.subVectors(panEnd, panStart).multiplyScalar(scope.panSpeed);
+            translateDelta.subVectors(translateEnd, translateStart).multiplyScalar(scope.translateSpeed);
 
-            pan(panDelta.x, panDelta.y);
+            translate(translateDelta.x, translateDelta.y);
 
-            panStart.copy(panEnd);
+            translateStart.copy(translateEnd);
 
             scope.update();
 
@@ -409,16 +393,11 @@ class OrbitControls extends EventDispatcher {
 
         function handleMouseWheel(event) {
 
-            //way too fast
+            if (event.deltaY > 0) {
+                reduce(getScale(0.95));
 
-            if (event.deltaY < 0) {
-
-                reduce(event.deltaY);
-
-            } else if (event.deltaY > 0) {
-
-                enlarge(event.deltaY);
-
+            } else if (event.deltaY < 0) {
+                enlarge(getScale(1.05));
             }
 
             scope.update();
@@ -432,22 +411,22 @@ class OrbitControls extends EventDispatcher {
             switch (event.code) {
 
                 case scope.keys.UP:
-                    pan(0, scope.keyPanSpeed);
+                    translate(0, scope.keyTranslateSpeed);
                     needsUpdate = true;
                     break;
 
                 case scope.keys.BOTTOM:
-                    pan(0, - scope.keyPanSpeed);
+                    translate(0, - scope.keyTranslateSpeed);
                     needsUpdate = true;
                     break;
 
                 case scope.keys.LEFT:
-                    pan(scope.keyPanSpeed, 0);
+                    translate(scope.keyTranslateSpeed, 0);
                     needsUpdate = true;
                     break;
 
                 case scope.keys.RIGHT:
-                    pan(- scope.keyPanSpeed, 0);
+                    translate(- scope.keyTranslateSpeed, 0);
                     needsUpdate = true;
                     break;
 
@@ -482,18 +461,18 @@ class OrbitControls extends EventDispatcher {
 
         }
 
-        function handleTouchStartPan(event) {
+        function handleTouchStartTranslate(event) {
 
             if (event.touches.length == 1) {
 
-                panStart.set(event.touches[0].pageX, event.touches[0].pageY);
+                translateStart.set(event.touches[0].pageX, event.touches[0].pageY);
 
             } else {
 
                 const x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
                 const y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
 
-                panStart.set(x, y);
+                translateStart.set(x, y);
 
             }
 
@@ -510,11 +489,11 @@ class OrbitControls extends EventDispatcher {
 
         }
 
-        function handleTouchStartScalePan(event) {
+        function handleTouchStartScaleTranslate(event) {
 
             if (scope.enableZoom) handleTouchStartScale(event);
 
-            if (scope.enablePan) handleTouchStartPan(event);
+            if (scope.enableTranslate) handleTouchStartTranslate(event);
 
         }
 
@@ -551,26 +530,26 @@ class OrbitControls extends EventDispatcher {
 
         }
 
-        function handleTouchMovePan(event) {
+        function handleTouchMoveTranslate(event) {
 
             if (event.touches.length == 1) {
 
-                panEnd.set(event.touches[0].pageX, event.touches[0].pageY);
+                translateEnd.set(event.touches[0].pageX, event.touches[0].pageY);
 
             } else {
 
                 const x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
                 const y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
 
-                panEnd.set(x, y);
+                translateEnd.set(x, y);
 
             }
 
-            panDelta.subVectors(panEnd, panStart).multiplyScalar(scope.panSpeed);
+            translateDelta.subVectors(translateEnd, translateStart).multiplyScalar(scope.translateSpeed);
 
-            pan(panDelta.x, panDelta.y);
+            translate(translateDelta.x, translateDelta.y);
 
-            panStart.copy(panEnd);
+            translateStart.copy(translateEnd);
 
         }
 
@@ -594,11 +573,11 @@ class OrbitControls extends EventDispatcher {
 
         }
 
-        function handleTouchMoveScalePan(event) {
+        function handleTouchMoveScaleTranslate(event) {
 
             if (scope.enableZoom) handleTouchMoveScale(event);
 
-            if (scope.enablePan) handleTouchMovePan(event);
+            if (scope.enableTranslate) handleTouchMoveTranslate(event);
 
         }
 
@@ -720,11 +699,11 @@ class OrbitControls extends EventDispatcher {
 
                     if (event.ctrlKey || event.metaKey || event.shiftKey) {
 
-                        if (scope.enablePan === false) return;
+                        if (scope.enableTranslate === false) return;
 
-                        handleMouseDownPan(event);
+                        handleMouseDownTranslate(event);
 
-                        state = STATE.PAN;
+                        state = STATE.TRANSLATE;
 
                     } else {
 
@@ -738,7 +717,7 @@ class OrbitControls extends EventDispatcher {
 
                     break;
 
-                case MOUSE.PAN:
+                case MOUSE.TRANSLATE:
 
                     if (event.ctrlKey || event.metaKey || event.shiftKey) {
 
@@ -750,11 +729,11 @@ class OrbitControls extends EventDispatcher {
 
                     } else {
 
-                        if (scope.enablePan === false) return;
+                        if (scope.enableTranslate === false) return;
 
-                        handleMouseDownPan(event);
+                        handleMouseDownTranslate(event);
 
-                        state = STATE.PAN;
+                        state = STATE.TRANSLATE;
 
                     }
 
@@ -801,11 +780,11 @@ class OrbitControls extends EventDispatcher {
 
                     break;
 
-                case STATE.PAN:
+                case STATE.TRANSLATE:
 
-                    if (scope.enablePan === false) return;
+                    if (scope.enableTranslate === false) return;
 
-                    handleMouseMovePan(event);
+                    handleMouseMoveTranslate(event);
 
                     break;
 
@@ -844,7 +823,7 @@ class OrbitControls extends EventDispatcher {
 
         function onKeyDown(event) {
 
-            if (scope.enabled === false || scope.enablePan === false) return;
+            if (scope.enabled === false || scope.enableTranslate === false) return;
 
             handleKeyDown(event);
 
@@ -872,13 +851,13 @@ class OrbitControls extends EventDispatcher {
 
                             break;
 
-                        case ACTION.PAN:
+                        case ACTION.TRANSLATE:
 
-                            if (scope.enablePan === false) return;
+                            if (scope.enableTranslate === false) return;
 
-                            handleTouchStartPan(event);
+                            handleTouchStartTranslate(event);
 
-                            state = STATE.TOUCH_PAN;
+                            state = STATE.TOUCH_TRANSLATE;
 
                             break;
 
@@ -893,12 +872,12 @@ class OrbitControls extends EventDispatcher {
                 case 2:
 
                     switch (scope.touches.TWO) {
-                        case ACTION.SCALE_PAN:
-                            if (scope.enableZoom === false && scope.enablePan === false) return;
+                        case ACTION.SCALE_TRANSLATE:
+                            if (scope.enableZoom === false && scope.enableTranslate === false) return;
 
-                            handleTouchStartScalePan(event);
+                            handleTouchStartScaleTranslate(event);
 
-                            state = STATE.TOUCH_SCALE_PAN;
+                            state = STATE.TOUCH_SCALE_TRANSLATE;
 
                             break;
 
@@ -951,21 +930,21 @@ class OrbitControls extends EventDispatcher {
 
                     break;
 
-                case STATE.TOUCH_PAN:
+                case STATE.TOUCH_TRANSLATE:
 
-                    if (scope.enablePan === false) return;
+                    if (scope.enableTranslate === false) return;
 
-                    handleTouchMovePan(event);
+                    handleTouchMoveTranslate(event);
 
                     scope.update();
 
                     break;
 
-                case STATE.TOUCH_SCALE_PAN:
+                case STATE.TOUCH_SCALE_TRANSLATE:
 
-                    if (scope.enableZoom === false && scope.enablePan === false) return;
+                    if (scope.enableZoom === false && scope.enableTranslate === false) return;
 
-                    handleTouchMoveScalePan(event);
+                    handleTouchMoveScaleTranslate(event);
 
                     scope.update();
 

@@ -352,9 +352,7 @@ class OrbitControls extends EventDispatcher {
         const dollyDelta = new Vector2();
 
         function getAutoRotationAngle() {
-
             return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
-
         }
 
         function getZoomScale() {
