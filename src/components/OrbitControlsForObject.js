@@ -8,8 +8,6 @@ import {
     Vector3,
     Quaternion,
     Euler,
-    Plane,
-    Raycaster
 } from 'three';
 
 const MOUSE = {
@@ -85,6 +83,7 @@ class ObjectControls extends EventDispatcher {
 
         // Set to false to disable translating
         this.enableTranslate = true;
+        this.verticalDragToForward = true;
         this.translateSpeed = 1.0;
         this.screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
         this.keyTranslateSpeed = 7.0;	// pixels moved per arrow key push
@@ -165,7 +164,7 @@ class ObjectControls extends EventDispatcher {
 
                 if (positionChanged) {
                     console.log(position)
-                    // scope.object.position.set(position.x, position.y, position.z)
+                    scope.object.position.set(position.x, position.y, position.z)
                     positionChanged = false;
                 }
 
@@ -223,6 +222,7 @@ class ObjectControls extends EventDispatcher {
 
         // const panOffset = new Vector3();
         const position = new Vector3();
+        position.copy(scope.position0);
         let positionChanged = false;
 
         // let scale = 1;
@@ -240,16 +240,6 @@ class ObjectControls extends EventDispatcher {
         const scaleEnd = new Vector2();
         const scaleDelta = new Vector3();
         let scaleAngle = 0;
-
-        const XZplane = new Plane(new Vector3(0, 1, 0), 0);
-        let raycaster = new Raycaster();
-        // let intersects = new Vector3();
-
-        const width = scope.domElement.width;
-        const height = scope.domElement.height;
-        const widthHalf = width / 2;
-        const heightHalf = height / 2;
-
 
         // function getAutoRotationAngle() {
 
@@ -271,61 +261,67 @@ class ObjectControls extends EventDispatcher {
         //     console.log("rotateUp", angle)
         // }
 
-        // const translateLeft = function () {
+        const translateLeft = function () {
 
-        //     return function translateLeft(d) {
+            return function translateLeft(d) {
 
-        //         position.x += d / 100;
-        //         positionChanged = true;
-        //     }
+                let cameraDirection = new Vector3();
+                camera.getWorldDirection(cameraDirection);
+                let right = cameraDirection.cross(new Vector3(0, 1, 0)).normalize();
 
-        // }();
+                position.add(
+                    right.multiplyScalar(d / 50)
+                )
+                positionChanged = true;
 
-        // const translateUp = function () {
+            }
 
-        //     return function translateUp(d) {
-        //         position.y += d / 100;
-        //         positionChanged = true;
-        //     }
+        }();
 
-        // }();
+        const translateUp = function () {
+
+            return function translateDeep(d) {
+                let cameraDirection = new Vector3();
+                camera.getWorldDirection(cameraDirection);
+                let right = cameraDirection.cross(new Vector3(1, 0, 0)).normalize();
+
+                position.add(
+                    right.multiplyScalar(d / 50)
+                )
+                positionChanged = true;
+            }
+
+        }();
+
+        const translateDeep = function () {
+
+            return function translateDeep(d) {
+                let cameraDirection = new Vector3();
+                camera.getWorldDirection(cameraDirection);
+                cameraDirection.y = 0;
+
+                position.add(
+                    cameraDirection.multiplyScalar(-d / 10)
+                )
+                positionChanged = true;
+            }
+
+        }();
 
         // deltaX and deltaY are in pixels; right and down are positive
         const translate = function () {
 
             // const offset = new Vector3();
 
-
-
             return function translate(deltaX, deltaY) {
 
-                var pos = scope.object.position;
-                pos.project(camera);
-                pos.x = (pos.x * widthHalf) + widthHalf;
-                pos.y = - (pos.y * heightHalf) + heightHalf;
+                translateLeft(deltaX);
 
-                let mouse = new Vector2(pos.x += deltaX, pos.y += deltaY);
-
-                // let div = document.createElement("div");
-                // div.style.position = "absolute";
-                // div.style.top = mouse.y + "px";
-                // div.style.left = mouse.x + "px";
-                // div.style.backgroundColor = "blue";
-                // div.style.width = "10px"
-                // div.style.height = "10px";
-                // document.body.appendChild(div);
-
-                let i = new Vector3();
-
-                raycaster.setFromCamera(mouse, scope.camera);
-                raycaster.ray.intersectPlane(XZplane, i);
-                console.log(i)
-                position.copy(i)
-                console.log(position)
-                positionChanged = true;
-                scope.update();
-                // translateLeft(deltaX);
-                // translateUp(deltaY);
+                if (scope.verticalDragToForward) {
+                    translateDeep(deltaY)
+                } else {
+                    translateUp(deltaY);
+                }
 
             };
 

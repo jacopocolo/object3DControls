@@ -41,10 +41,6 @@ export default {
       cube.position.set(1, 1, 1);
       scene.add(cube);
 
-      let XZplane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      const helper = new THREE.PlaneHelper(XZplane, 1, 0xffff00);
-      scene.add(helper);
-
       controls = new ObjectControls(cube, camera, renderer.domElement);
       controls.zoomSpeed = 2;
       controls.touches = {
