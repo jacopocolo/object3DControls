@@ -38,9 +38,14 @@ export default {
         side: THREE.DoubleSide,
       });
       cube = new THREE.Mesh(geometry, material);
+      cube.position.set(1, 1, 1);
       scene.add(cube);
 
-      controls = new ObjectControls(cube, renderer.domElement);
+      let XZplane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const helper = new THREE.PlaneHelper(XZplane, 1, 0xffff00);
+      scene.add(helper);
+
+      controls = new ObjectControls(cube, camera, renderer.domElement);
       controls.zoomSpeed = 2;
       controls.touches = {
         ONE: "TRANSLATE",
@@ -55,15 +60,15 @@ export default {
         false
       );
       controls.update();
-      camera.position.set(5, 5, 5);
-      camera.lookAt(0, 0, 0);
+      camera.position.set(3, 2, 5);
+      // camera.lookAt(0, 0, 0);
     },
     animate() {
       requestAnimationFrame(this.animate);
 
       // cube.rotation.x += 0.01;
       // cube.rotation.y += 0.01;
-      // controls.update();
+      controls.update();
       // console.log(cube.position);
 
       renderer.render(scene, camera);

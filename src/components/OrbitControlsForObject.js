@@ -8,6 +8,8 @@ import {
     Vector3,
     Quaternion,
     Euler,
+    Plane,
+    Raycaster
 } from 'three';
 
 const MOUSE = {
@@ -35,7 +37,7 @@ const _endEvent = { type: 'end' };
 
 class ObjectControls extends EventDispatcher {
 
-    constructor(object, domElement) {
+    constructor(object, camera, domElement) {
 
         super();
 
@@ -44,6 +46,7 @@ class ObjectControls extends EventDispatcher {
 
         this.object = object;
         this.domElement = domElement;
+        this.camera = camera;
 
         // Set to false to disable this control
         this.enabled = true;
@@ -161,8 +164,9 @@ class ObjectControls extends EventDispatcher {
                 }
 
                 if (positionChanged) {
-                    scope.object.position.x = position.x;
-                    scope.object.position.y = -position.y;
+                    console.log(position)
+                    // scope.object.position.set(position.x, position.y, position.z)
+                    positionChanged = false;
                 }
 
                 return false;
@@ -237,6 +241,16 @@ class ObjectControls extends EventDispatcher {
         const scaleDelta = new Vector3();
         let scaleAngle = 0;
 
+        const XZplane = new Plane(new Vector3(0, 1, 0), 0);
+        let raycaster = new Raycaster();
+        // let intersects = new Vector3();
+
+        const width = scope.domElement.width;
+        const height = scope.domElement.height;
+        const widthHalf = width / 2;
+        const heightHalf = height / 2;
+
+
         // function getAutoRotationAngle() {
 
         //     return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
@@ -257,34 +271,61 @@ class ObjectControls extends EventDispatcher {
         //     console.log("rotateUp", angle)
         // }
 
-        const translateLeft = function () {
+        // const translateLeft = function () {
 
-            return function translateLeft(d) {
-                position.x += d / 100;
-                positionChanged = true;
-            }
+        //     return function translateLeft(d) {
 
-        }();
+        //         position.x += d / 100;
+        //         positionChanged = true;
+        //     }
 
-        const translateUp = function () {
+        // }();
 
-            return function translateUp(d) {
-                position.y += d / 100;
-                positionChanged = true;
-            }
+        // const translateUp = function () {
 
-        }();
+        //     return function translateUp(d) {
+        //         position.y += d / 100;
+        //         positionChanged = true;
+        //     }
+
+        // }();
 
         // deltaX and deltaY are in pixels; right and down are positive
         const translate = function () {
 
             // const offset = new Vector3();
 
-            return function translate(deltaX, deltaY) {
-                // const element = scope.domElement;
 
-                translateLeft(deltaX);
-                translateUp(deltaY);
+
+            return function translate(deltaX, deltaY) {
+
+                var pos = scope.object.position;
+                pos.project(camera);
+                pos.x = (pos.x * widthHalf) + widthHalf;
+                pos.y = - (pos.y * heightHalf) + heightHalf;
+
+                let mouse = new Vector2(pos.x += deltaX, pos.y += deltaY);
+
+                // let div = document.createElement("div");
+                // div.style.position = "absolute";
+                // div.style.top = mouse.y + "px";
+                // div.style.left = mouse.x + "px";
+                // div.style.backgroundColor = "blue";
+                // div.style.width = "10px"
+                // div.style.height = "10px";
+                // document.body.appendChild(div);
+
+                let i = new Vector3();
+
+                raycaster.setFromCamera(mouse, scope.camera);
+                raycaster.ray.intersectPlane(XZplane, i);
+                console.log(i)
+                position.copy(i)
+                console.log(position)
+                positionChanged = true;
+                scope.update();
+                // translateLeft(deltaX);
+                // translateUp(deltaY);
 
             };
 
