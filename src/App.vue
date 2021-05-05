@@ -42,37 +42,35 @@ export default {
       scene.add(cube);
 
       controls = new ObjectControls(cube, camera, renderer.domElement);
-      controls.zoomSpeed = 2;
-      controls.touches = {
-        ONE: "TRANSLATE",
-        TWO: "SCALE_ROTATE",
-      };
+      controls.showTouches = true;
       controls.addEventListener(
         "change",
         () => {
-          console.log("update");
           controls.update();
+          // camera.lookAt(cube.position.x, cube.position.y, cube.position.z);
+          renderer.render(scene, camera);
         },
         false
       );
       controls.update();
       camera.position.set(3, 2, 5);
       // camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
     },
     animate() {
       requestAnimationFrame(this.animate);
 
       // cube.rotation.x += 0.01;
       // cube.rotation.y += 0.01;
-      controls.update();
+      // controls.update();
       // console.log(cube.position);
 
-      renderer.render(scene, camera);
+      // renderer.render(scene, camera);
     },
   },
   mounted: function () {
     this.init();
-    this.animate();
+    // this.animate();
   },
 };
 </script>

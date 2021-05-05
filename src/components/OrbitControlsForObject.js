@@ -1,7 +1,3 @@
-//https://github.com/albertopiras/threeJS-object-controls/blob/master/ObjectControls.js
-//rotate https://jsfiddle.net/MadLittleMods/n6u6asza/
-//https://codepen.io/OpherV/pen/YXwwNR
-
 import {
     EventDispatcher,
     Vector2,
@@ -75,16 +71,16 @@ class ObjectControls extends EventDispatcher {
         // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
         // Set to false to disable zooming
         this.enableZoom = true;
-        this.zoomSpeed = 1.0;
+        this.zoomSpeed = 0.5;
 
         // Set to false to disable rotating
         this.enableRotate = true;
-        this.rotateSpeed = 1;
+        this.rotateSpeed = 0.5;
 
         // Set to false to disable translating
         this.enableTranslate = true;
         this.verticalDragToForward = true;
-        this.translateSpeed = 1.0;
+        this.translateSpeed = 0.5;
         this.screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
         this.keyTranslateSpeed = 7.0;	// pixels moved per arrow key push
 
@@ -95,7 +91,7 @@ class ObjectControls extends EventDispatcher {
         this.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.SCALE, RIGHT: MOUSE.TRANSLATE };
 
         // Touch fingers
-        this.touches = { ONE: ACTION.TRANSLATE, TWO: ACTION.SCALE_ROTATE };
+        this.touches = { ONE: ACTION.NONE, TWO: ACTION.SCALE_ROTATE, THREE: ACTION.TRANSLATE };
 
         // for reset
         this.position0 = this.object.position.clone();
@@ -104,6 +100,8 @@ class ObjectControls extends EventDispatcher {
 
         // the target DOM element for key events
         this._domElementKeyEvents = null;
+
+        this.showTouches = false;
 
         //
         // public methods
@@ -144,28 +142,33 @@ class ObjectControls extends EventDispatcher {
 
             return function update() {
 
-                var deltaRotationQuaternion = new Quaternion()
-                    .setFromEuler(new Euler(
-                        (rotateDelta.y * 1) * (Math.PI / 180),
-                        (rotateDelta.x * 1) * (Math.PI / 180),
-                        0,
-                        'XYZ'
-                    ));
+                if (rotationChanged) {
+                    var deltaRotationQuaternion = new Quaternion()
+                        .setFromEuler(new Euler(
+                            (rotateDelta.y * 1) * (Math.PI / 180),
+                            (rotateDelta.x * 1) * (Math.PI / 180),
+                            0,
+                            'XYZ'
+                        ));
 
-                scope.object.quaternion.multiplyQuaternions(deltaRotationQuaternion, scope.object.quaternion);
+                    scope.object.quaternion.multiplyQuaternions(deltaRotationQuaternion, scope.object.quaternion);
 
-                rotateDelta.x = 0;
-                rotateDelta.y = 0;
+                    rotateDelta.x = 0;
+                    rotateDelta.y = 0;
+                    rotationChanged = false;
+                    scope.dispatchEvent(_changeEvent);
+                }
 
                 if (scaleChanged) {
                     scope.object.scale.set(scaleDelta.x, scaleDelta.y, scaleDelta.z)
                     scaleChanged = false;
+                    scope.dispatchEvent(_changeEvent);
                 }
 
                 if (positionChanged) {
-                    console.log(position)
                     scope.object.position.set(position.x, position.y, position.z)
                     positionChanged = false;
+                    scope.dispatchEvent(_changeEvent);
                 }
 
                 return false;
@@ -231,6 +234,7 @@ class ObjectControls extends EventDispatcher {
         const rotateStart = new Vector2();
         const rotateEnd = new Vector2();
         const rotateDelta = new Vector2();
+        let rotationChanged = false;
 
         const translateStart = new Vector2();
         const translateEnd = new Vector2();
@@ -241,6 +245,8 @@ class ObjectControls extends EventDispatcher {
         const scaleDelta = new Vector3();
         let scaleAngle = 0;
 
+        let touchOne, touchTwo, touchThree;
+        let htmlTouches = [];
         // function getAutoRotationAngle() {
 
         //     return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
@@ -385,6 +391,8 @@ class ObjectControls extends EventDispatcher {
 
             rotateStart.copy(rotateEnd);
 
+            rotationChanged = true;
+
             scope.update();
 
         }
@@ -395,7 +403,7 @@ class ObjectControls extends EventDispatcher {
 
             scaleDelta.subVectors(scaleEnd, scaleStart);
             scaleAngle = Math.atan2(scaleEnd.y - scaleStart.y, scaleEnd.x - scaleStart.x); //in radians;
-            console.warn(scaleAngle);
+            // console.warn(scaleAngle);
 
             //doesn't really work
 
@@ -573,6 +581,8 @@ class ObjectControls extends EventDispatcher {
             // rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight);
 
             rotateStart.copy(rotateEnd);
+
+            rotationChanged = true;
 
         }
 
@@ -912,6 +922,19 @@ class ObjectControls extends EventDispatcher {
                             state = STATE.NONE;
 
                     }
+                    if (scope.showTouches) {
+                        console.log("showTouches")
+                        touchOne = document.createElement("div");
+                        touchOne.style.position = "absolute";
+                        touchOne.style.top = event.touches[0].pageY + "px";
+                        touchOne.style.left = event.touches[0].pageX + "px";
+                        touchOne.style.backgroundColor = "rgba(255,0,0,0.3)";
+                        touchOne.style.width = "50px"
+                        touchOne.style.height = "50px";
+                        touchOne.style.borderRadius = "30px";
+                        document.body.appendChild(touchOne);
+                        htmlTouches.push(touchOne)
+                    }
 
                     break;
 
@@ -941,7 +964,48 @@ class ObjectControls extends EventDispatcher {
                             state = STATE.NONE;
 
                     }
+                    if (scope.showTouches) {
+                        touchTwo = document.createElement("div");
+                        touchTwo.style.position = "absolute";
+                        touchTwo.style.top = event.touches[1].pageY + "px";
+                        touchTwo.style.left = event.touches[1].pageX + "px";
+                        touchTwo.style.backgroundColor = "rgba(255,0,0,0.3)";
+                        touchTwo.style.width = "50px"
+                        touchTwo.style.height = "50px";
+                        touchTwo.style.borderRadius = "30px";
+                        document.body.appendChild(touchTwo);
+                        htmlTouches.push(touchTwo)
+                    }
 
+                    break;
+
+                case 3:
+                    switch (scope.touches.THREE) {
+                        case ACTION.TRANSLATE:
+                            if (scope.enableZoom === false && scope.enableTranslate === false) return;
+
+                            handleTouchStartTranslate(event);
+
+                            state = STATE.TOUCH_TRANSLATE;
+
+                            break;
+
+                        default:
+                            state = STATE.NONE;
+
+                    }
+                    if (scope.showTouches) {
+                        touchThree = document.createElement("div");
+                        touchThree.style.position = "absolute";
+                        touchThree.style.top = event.touches[2].pageY + "px";
+                        touchThree.style.left = event.touches[2].pageX + "px";
+                        touchThree.style.backgroundColor = "rgba(255,0,0,0.3)";
+                        touchThree.style.width = "50px"
+                        touchThree.style.height = "50px";
+                        touchThree.style.borderRadius = "30px";
+                        document.body.appendChild(touchThree);
+                        htmlTouches.push(touchThree)
+                    }
                     break;
 
                 default:
@@ -1012,6 +1076,13 @@ class ObjectControls extends EventDispatcher {
 
             }
 
+            if (scope.showTouches) {
+                for (let i = 0; i <= event.touches.length; i++) {
+                    htmlTouches[i].style.top = event.touches[i].pageY + "px";
+                    htmlTouches[i].style.left = event.touches[i].pageX + "px";
+                }
+            }
+
         }
 
         function onTouchEnd(event) {
@@ -1023,6 +1094,13 @@ class ObjectControls extends EventDispatcher {
             scope.dispatchEvent(_endEvent);
 
             state = STATE.NONE;
+
+            if (scope.showTouches) {
+                for (let i = 0; i <= htmlTouches.length; i++) {
+                    htmlTouches[i]?.remove()
+                }
+                htmlTouches = [];
+            }
 
         }
 
