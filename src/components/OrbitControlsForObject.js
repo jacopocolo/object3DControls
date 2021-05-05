@@ -1,3 +1,14 @@
+/*
+TODO:
+- introduce min and max distance for translate from starting position
+- introduce min and max Polar angle, min and max AzimuthAngle
+- introduce damping? Doubtful but okay
+- rename zooming?
+- screenSpacePanning? (I think it's == to verticalDragForward)
+- keyTranslateSpeed?
+- check if we need element?
+*/
+
 import {
     EventDispatcher,
     Vector2,
@@ -45,7 +56,7 @@ class ObjectControls extends EventDispatcher {
         // Set to false to disable this control
         this.enabled = true;
 
-        // How far you can dolly in and out ( PerspectiveCamera only )
+        // How far you can translate the object
         this.minDistance = 0;
         this.maxDistance = Infinity;
 
@@ -80,7 +91,7 @@ class ObjectControls extends EventDispatcher {
         // Set to false to disable translating
         this.enableTranslate = true;
         this.verticalDragToForward = true;
-        this.translateSpeed = 0.5;
+        this.translateSpeed = 1;
         this.screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
         this.keyTranslateSpeed = 7.0;	// pixels moved per arrow key push
 
@@ -100,7 +111,6 @@ class ObjectControls extends EventDispatcher {
 
         // the target DOM element for key events
         this._domElementKeyEvents = null;
-
         this.showTouches = false;
 
         //
@@ -143,18 +153,26 @@ class ObjectControls extends EventDispatcher {
             return function update() {
 
                 if (rotationChanged) {
-                    var deltaRotationQuaternion = new Quaternion()
-                        .setFromEuler(new Euler(
-                            (rotateDelta.y * 1) * (Math.PI / 180),
-                            (rotateDelta.x * 1) * (Math.PI / 180),
-                            0,
-                            'XYZ'
-                        ));
+                    // var deltaRotationQuaternion = new Quaternion()
+                    //     .setFromEuler(new Euler(
+                    //         (rotateDelta.y * 1) * (Math.PI / 180),
+                    //         (rotateDelta.x * 1) * (Math.PI / 180),
+                    //         (rotateDelta.z * 1) * (Math.PI / 180),
+                    //         'XYZ'
+                    //     ));
 
-                    scope.object.quaternion.multiplyQuaternions(deltaRotationQuaternion, scope.object.quaternion);
+                    // scope.object.quaternion.multiplyQuaternions(deltaRotationQuaternion, scope.object.quaternion);
+
+                    console.log(Quaternion, Euler)
+
+                    scope.object.rotation.set(
+                        scope.object.rotation.x += rotateDelta.y / 100,
+                        scope.object.rotation.y += rotateDelta.x / 100,
+                        scope.object.rotation.z += rotateDelta.z / 100)
 
                     rotateDelta.x = 0;
                     rotateDelta.y = 0;
+                    rotateDelta.z = 0;
                     rotationChanged = false;
                     scope.dispatchEvent(_changeEvent);
                 }
@@ -231,9 +249,9 @@ class ObjectControls extends EventDispatcher {
         // let scale = 1;
         let scaleChanged = false;
 
-        const rotateStart = new Vector2();
-        const rotateEnd = new Vector2();
-        const rotateDelta = new Vector2();
+        const rotateStart = new Vector3();
+        const rotateEnd = new Vector3();
+        const rotateDelta = new Vector3();
         let rotationChanged = false;
 
         const translateStart = new Vector2();
@@ -255,7 +273,7 @@ class ObjectControls extends EventDispatcher {
 
         function getScale(val) {
 
-            return Math.pow(val, scope.zoomSpeed);
+            return Math.pow(val, scope.zoomSpeed / 2);
 
         }
 
@@ -427,7 +445,7 @@ class ObjectControls extends EventDispatcher {
 
             translateEnd.set(event.clientX, event.clientY);
 
-            translateDelta.subVectors(translateEnd, translateStart).multiplyScalar(scope.translateSpeed);
+            translateDelta.subVectors(translateEnd, translateStart).multiplyScalar(scope.translateSpeed / 2);
 
             translate(translateDelta.x, translateDelta.y);
 
@@ -572,6 +590,10 @@ class ObjectControls extends EventDispatcher {
 
                 rotateEnd.set(x, y);
 
+                const z = Math.atan2(rotateEnd.y - rotateStart.y, rotateEnd.x - rotateStart.x); //in radians;
+
+                rotateEnd.set(x, y, z)
+
             }
 
             rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(scope.rotateSpeed);
@@ -601,7 +623,7 @@ class ObjectControls extends EventDispatcher {
 
             }
 
-            translateDelta.subVectors(translateEnd, translateStart).multiplyScalar(scope.translateSpeed);
+            translateDelta.subVectors(translateEnd, translateStart).multiplyScalar(scope.translateSpeed / 2);
 
             translate(translateDelta.x, translateDelta.y);
 
@@ -618,7 +640,7 @@ class ObjectControls extends EventDispatcher {
 
             scaleEnd.set(0, distance);
 
-            scaleDelta.set(0, Math.pow(scaleEnd.y / scaleStart.y, scope.zoomSpeed));
+            scaleDelta.set(0, Math.pow(scaleEnd.y / scaleStart.y, scope.zoomSpeed / 2));
             scaleAngle = Math.atan2(scaleEnd.y - scaleStart.y, scaleEnd.x - scaleStart.x); //in radians;
             console.log(scaleAngle);
 
